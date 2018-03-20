@@ -115,7 +115,12 @@ describe('chromium feature', () => {
 
   describe('navigator.serviceWorker', () => {
     it('should register for file scheme', (done) => {
-      w = new BrowserWindow({ show: false })
+      w = new BrowserWindow({
+        show: false,
+        webPreferences: {
+          partition: 'sw-file-scheme-spec'
+        }
+      })
       w.webContents.on('ipc-message', (event, args) => {
         if (args[0] === 'reload') {
           w.webContents.reload()
@@ -123,7 +128,7 @@ describe('chromium feature', () => {
           done(`unexpected error : ${args[1]}`)
         } else if (args[0] === 'response') {
           assert.equal(args[1], 'Hello from serviceWorker!')
-          session.defaultSession.clearStorageData({
+          session.fromPartition('sw-file-scheme-spec').clearStorageData({
             storages: ['serviceworkers']
           }, () => done())
         }
@@ -208,6 +213,26 @@ describe('chromium feature', () => {
       b = window.open(`file://${fixtures}/pages/window-open-size.html`, '', 'show=no')
     })
 
+    for (const show of [true, false]) {
+      it(`inherits parent visibility over parent {show=${show}} option`, (done) => {
+        const w = new BrowserWindow({show})
+
+        // toggle visibility
+        if (show) {
+          w.hide()
+        } else {
+          w.show()
+        }
+
+        w.webContents.once('new-window', (e, url, frameName, disposition, options) => {
+          assert.equal(options.show, w.isVisible())
+          w.close()
+          done()
+        })
+        w.loadURL(`file://${fixtures}/pages/window-open.html`)
+      })
+    }
+
     it('disables node integration when it is disabled on the parent window', (done) => {
       let b
       listener = (event) => {
@@ -222,6 +247,26 @@ describe('chromium feature', () => {
         protocol: 'file',
         query: {
           p: `${fixtures}/pages/window-opener-node.html`
+        },
+        slashes: true
+      })
+      b = window.open(windowUrl, '', 'nodeIntegration=no,show=no')
+    })
+
+    it('disables webviewTag when node integration is disabled on the parent window', (done) => {
+      let b
+      listener = (event) => {
+        assert.equal(event.data.isWebViewUndefined, true)
+        b.close()
+        done()
+      }
+      window.addEventListener('message', listener)
+
+      const windowUrl = require('url').format({
+        pathname: `${fixtures}/pages/window-opener-no-web-view-tag.html`,
+        protocol: 'file',
+        query: {
+          p: `${fixtures}/pages/window-opener-web-view.html`
         },
         slashes: true
       })
@@ -247,7 +292,7 @@ describe('chromium feature', () => {
       app.once('web-contents-created', (event, contents) => {
         contents.once('did-finish-load', () => {
           app.once('browser-window-created', (event, window) => {
-            const preferences = window.webContents.getWebPreferences()
+            const preferences = window.webContents.getLastWebPreferences()
             assert.equal(preferences.javascript, false)
             window.destroy()
             b.close()
@@ -469,7 +514,7 @@ describe('chromium feature', () => {
         done()
       }
       window.addEventListener('message', listener)
-      w = window.open(url, '', 'show=no')
+      w = window.open(url, '', 'show=no,nodeIntegration=no')
     })
 
     it('works when origin matches', (done) => {
@@ -478,7 +523,7 @@ describe('chromium feature', () => {
         done()
       }
       window.addEventListener('message', listener)
-      w = window.open(`file://${fixtures}/pages/window-opener-location.html`, '', 'show=no')
+      w = window.open(`file://${fixtures}/pages/window-opener-location.html`, '', 'show=no,nodeIntegration=no')
     })
 
     it('works when origin does not match opener but has node integration', (done) => {

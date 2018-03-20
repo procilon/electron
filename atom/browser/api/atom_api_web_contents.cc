@@ -377,8 +377,8 @@ WebContents::WebContents(v8::Isolate* isolate, const mate::Dictionary& options)
     options.Get("transparent", &transparent);
 
     content::WebContents::CreateParams params(session->browser_context());
-    auto* view = new OffScreenWebContentsView(
-        transparent, base::Bind(&WebContents::OnPaint, base::Unretained(this)));
+    auto* view = new OffScreenWebContentsView(transparent,
+        base::Bind(&WebContents::OnPaint, base::Unretained(this)));
     params.view = view;
     params.delegate_view = view;
 
@@ -1644,10 +1644,10 @@ void WebContents::StartPainting() {
     return;
 
 #if defined(ENABLE_OSR)
-  auto* osr_rwhv = static_cast<OffScreenRenderWidgetHostView*>(
-      web_contents()->GetRenderWidgetHostView());
-  if (osr_rwhv)
-    osr_rwhv->SetPainting(true);
+  const auto* wc_impl = static_cast<content::WebContentsImpl*>(web_contents());
+  auto* osr_wcv = static_cast<OffScreenWebContentsView*>(wc_impl->GetView());
+  if (osr_wcv)
+    osr_wcv->SetPainting(true);
 #endif
 }
 
@@ -1656,10 +1656,10 @@ void WebContents::StopPainting() {
     return;
 
 #if defined(ENABLE_OSR)
-  auto* osr_rwhv = static_cast<OffScreenRenderWidgetHostView*>(
-      web_contents()->GetRenderWidgetHostView());
-  if (osr_rwhv)
-    osr_rwhv->SetPainting(false);
+  const auto* wc_impl = static_cast<content::WebContentsImpl*>(web_contents());
+  auto* osr_wcv = static_cast<OffScreenWebContentsView*>(wc_impl->GetView());
+  if (osr_wcv)
+    osr_wcv->SetPainting(false);
 #endif
 }
 
@@ -1668,9 +1668,10 @@ bool WebContents::IsPainting() const {
     return false;
 
 #if defined(ENABLE_OSR)
-  const auto* osr_rwhv = static_cast<OffScreenRenderWidgetHostView*>(
-      web_contents()->GetRenderWidgetHostView());
-  return osr_rwhv && osr_rwhv->IsPainting();
+  const auto* wc_impl = static_cast<content::WebContentsImpl*>(web_contents());
+  auto* osr_wcv = static_cast<OffScreenWebContentsView*>(wc_impl->GetView());
+
+  return osr_wcv && osr_wcv->IsPainting();
 #else
   return false;
 #endif
@@ -1681,10 +1682,11 @@ void WebContents::SetFrameRate(int frame_rate) {
     return;
 
 #if defined(ENABLE_OSR)
-  auto* osr_rwhv = static_cast<OffScreenRenderWidgetHostView*>(
-      web_contents()->GetRenderWidgetHostView());
-  if (osr_rwhv)
-    osr_rwhv->SetFrameRate(frame_rate);
+  const auto* wc_impl = static_cast<content::WebContentsImpl*>(web_contents());
+  auto* osr_wcv = static_cast<OffScreenWebContentsView*>(wc_impl->GetView());
+
+  if (osr_wcv)
+    osr_wcv->SetFrameRate(frame_rate);
 #endif
 }
 
@@ -1693,9 +1695,10 @@ int WebContents::GetFrameRate() const {
     return 0;
 
 #if defined(ENABLE_OSR)
-  const auto* osr_rwhv = static_cast<OffScreenRenderWidgetHostView*>(
-      web_contents()->GetRenderWidgetHostView());
-  return osr_rwhv ? osr_rwhv->GetFrameRate() : 0;
+  const auto* wc_impl = static_cast<content::WebContentsImpl*>(web_contents());
+  auto* osr_wcv = static_cast<OffScreenWebContentsView*>(wc_impl->GetView());
+
+  return osr_wcv ? osr_wcv->GetFrameRate() : 0;
 #else
   return 0;
 #endif
@@ -1763,6 +1766,14 @@ v8::Local<v8::Value> WebContents::GetWebPreferences(v8::Isolate* isolate) {
   WebContentsPreferences* web_preferences =
       WebContentsPreferences::FromWebContents(web_contents());
   return mate::ConvertToV8(isolate, *web_preferences->web_preferences());
+}
+
+v8::Local<v8::Value> WebContents::GetLastWebPreferences(v8::Isolate* isolate) {
+  WebContentsPreferences* web_preferences =
+      WebContentsPreferences::FromWebContents(web_contents());
+  if (!web_preferences)
+    return v8::Null(isolate);
+  return mate::ConvertToV8(isolate, *web_preferences->last_web_preferences());
 }
 
 v8::Local<v8::Value> WebContents::GetOwnerBrowserWindow() {
@@ -1911,6 +1922,7 @@ void WebContents::BuildPrototype(v8::Isolate* isolate,
       .SetMethod("_getZoomFactor", &WebContents::GetZoomFactor)
       .SetMethod("getType", &WebContents::GetType)
       .SetMethod("getWebPreferences", &WebContents::GetWebPreferences)
+      .SetMethod("getLastWebPreferences", &WebContents::GetLastWebPreferences)
       .SetMethod("getOwnerBrowserWindow", &WebContents::GetOwnerBrowserWindow)
       .SetMethod("hasServiceWorker", &WebContents::HasServiceWorker)
       .SetMethod("unregisterServiceWorker",

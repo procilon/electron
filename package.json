@@ -37,6 +37,7 @@
   },
   "private": true,
   "scripts": {
+    "createPatchTar": "tar -cvzf patch.tgz $(git diff --diff-filter=ACMRT -r --name-only --no-commit-id v1.8.2 | xargs)",
     "bootstrap": "python ./script/bootstrap.py",
     "browserify": "browserify",
     "bump-version": "./script/bump-version.py",

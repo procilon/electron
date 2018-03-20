@@ -411,6 +411,12 @@
       'atom/common/asar/asar_util.h',
       'atom/common/asar/scoped_temporary_file.cc',
       'atom/common/asar/scoped_temporary_file.h',
+
+      'atom/common/asar/manifest_asar.h',
+      'atom/common/asar/manifest_asar_mac.mm',
+      'atom/common/asar/manifest_asar_win.cc',
+      'atom/common/asar/manifest_asar_linux.cc',
+
       'atom/common/atom_command_line.cc',
       'atom/common/atom_command_line.h',
       'atom/common/atom_constants.cc',

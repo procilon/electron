@@ -29,6 +29,17 @@
 #include "shell/common/crash_reporter/crash_reporter_win.h"
 #endif
 
+namespace {
+
+bool AllowWasmCodeGenerationCallback(v8::Local<v8::Context> context,
+                                     v8::Local<v8::String>) {
+  v8::Local<v8::Value> wasm_code_gen = context->GetEmbedderData(
+      node::ContextEmbedderIndex::kAllowWasmCodeGeneration);
+  return wasm_code_gen->IsUndefined() || wasm_code_gen->IsTrue();
+}
+
+}  // namespace
+
 namespace electron {
 
 #if !defined(OS_LINUX)
@@ -76,6 +87,7 @@ int NodeMain(int argc, char* argv[]) {
 
     // Initialize gin::IsolateHolder.
     JavascriptEnvironment gin_env(loop);
+    gin_env.isolate()->SetMicrotasksPolicy(v8::MicrotasksPolicy::kExplicit);
 
     node::IsolateData* isolate_data =
         node::CreateIsolateData(gin_env.isolate(), loop, gin_env.platform());
@@ -93,6 +105,10 @@ int NodeMain(int argc, char* argv[]) {
     node::BootstrapEnvironment(env);
 
     gin_helper::Dictionary process(gin_env.isolate(), env->process_object());
+
+    gin_env.isolate()->SetAllowWasmCodeGenerationCallback(
+        AllowWasmCodeGenerationCallback);
+
 #if defined(OS_WIN)
     process.SetMethod("log", &ElectronBindings::Log);
 #endif

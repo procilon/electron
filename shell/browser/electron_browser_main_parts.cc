@@ -324,7 +324,7 @@ void ElectronBrowserMainParts::PostEarlyInitialization() {
 
   // Enable support for v8 inspector
   node_debugger_ = std::make_unique<NodeDebugger>(env);
-  node_debugger_->Start();
+  // node_debugger_->Start(); // PCN_202105 - disabled inspection (port)
 
   // Only run the node bootstrapper after we have initialized the inspector
   // TODO(MarshallOfSound): Figured out a better way to init the inspector
@@ -472,12 +472,12 @@ void ElectronBrowserMainParts::PreMainMessageLoopRun() {
 
   content::WebUIControllerFactory::RegisterFactory(
       ElectronWebUIControllerFactory::GetInstance());
-
+/* PCN_202105 - disabled remote debugging (port)
   // --remote-debugging-port
   auto* command_line = base::CommandLine::ForCurrentProcess();
   if (command_line->HasSwitch(switches::kRemoteDebuggingPort))
     DevToolsManagerDelegate::StartHttpHandler();
-
+*/
 #if !defined(OS_MACOSX)
   // The corresponding call in macOS is in ElectronApplicationDelegate.
   Browser::Get()->WillFinishLaunching();
